@@ -97,10 +97,8 @@ function draw(){
    ctx.restore();
  }
  ctx.fillStyle='#22283d';ctx.beginPath();ctx.arc(sim.mode===1?sim.fly.x:0,sim.mode===1?sim.fly.y:0,11,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#c4aaff';ctx.lineWidth=3;ctx.stroke();ctx.restore();
- ctx.textAlign='center';ctx.fillStyle='#7f91a9';ctx.font=`600 ${13*scale}px system-ui`;ctx.fillText('BALL CRUSHER / '+MODES[mode].name.toUpperCase(),cx,h*.13);
+ ctx.textAlign='center';
  ctx.fillStyle='#edf5ff';ctx.font=`700 ${72*scale}px system-ui`;ctx.fillText(sim.balls.length.toLocaleString('de-DE'),cx,h*.83);
- ctx.fillStyle='#8293ab';ctx.font=`500 ${14*scale}px system-ui`;ctx.fillText('KUGELN IN BEWEGUNG',cx,h*.86);
- ctx.fillStyle='#a69acb';ctx.font=`500 ${13*scale}px system-ui`;ctx.fillText(finished?'RUN COMPLETE':sim.eventUntil>sim.time?sim.event:'ONE HIT. TWO BALLS. REPEAT.',cx,h*.92);
 }
 function frame(now){
  const dt=Math.min((now-last)/1000,1/15);last=now;
