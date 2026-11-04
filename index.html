@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1018"><meta name="description" content="Dein Physics-Studio für hypnotische Ball-Simulationen. Sechs Modi, vertikale Videos und lokaler Export.">
+<title>Ball Crusher Simulator · Physics Studio</title><link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header class="topbar"><a class="brand" href="./"><span class="logo">◉</span> BALL CRUSHER <span class="brand-tag">STUDIO</span></a><span class="local-badge"><i></i> 100% lokal im Browser</span></header>
+<main>
+<section class="intro"><div><div class="eyebrow">PHYSICS PLAYGROUND / V1.0</div><h1>Kleine Kugeln.<br><span>Große Kettenreaktion.</span></h1><p>Mach aus Physik deinen nächsten Short.</p></div><div class="intro-note"><span>✦</span> Simulieren. Staunen. Exportieren.<small>Dein nächster Loop beginnt hier.</small></div></section>
+<div class="workspace">
+<section class="settings panel" aria-label="Simulation konfigurieren">
+<div class="section-title"><h2><span>01</span> Dein Experiment</h2><span class="mini-label">6 MODI</span></div>
+<div id="modes" class="modes"></div>
+<div class="divider"></div>
+<div class="section-title"><h2><span>02</span> Feintuning</h2><button id="resetSettings" class="text-button">Zurücksetzen</button></div>
+<label class="field-label" for="preset">Schnellstart-Preset</label><select id="preset"><option value="satisfying">✦ Satisfying · der Klassiker</option><option value="fast">ϟ Fast Growth · schnelle Action</option><option value="chaos">✧ Total Chaos · unberechenbar</option></select>
+<div class="range-heading"><label for="initial">Startkugeln</label><output id="initialValue">4</output></div><input id="initial" type="range" min="1" max="24" value="4">
+<div class="range-heading"><label for="limit">Stopp bei Kugeln</label><output id="limitValue">512</output></div><input id="limit" type="range" min="32" max="1200" step="1" value="512">
+<label class="switch-row"><span>Mitwachsende Arena<small>Mehr Platz für mehr Möglichkeiten</small></span><input id="grow" type="checkbox" checked role="switch"></label>
+<label class="switch-row"><span>Partikeleffekte</span><input id="particles" type="checkbox" checked role="switch"></label>
+<label class="switch-row"><span>Sound<small>Dezente Töne bei jedem Treffer</small></span><input id="sound" type="checkbox" role="switch"></label>
+<div class="tip"><span>↗</span><p>Ein Treffer, zwei neue Kugeln.<br>Wie weit geht deine Kettenreaktion?</p></div>
+</section>
+<section class="preview-column" aria-label="Live-Vorschau">
+<div class="preview-toolbar"><div><i class="live-dot"></i> LIVE SIMULATION</div><button id="fullscreen" class="text-button">⛶ &nbsp; Clean View</button></div>
+<div id="stage" class="stage"><canvas id="canvas" width="720" height="1280" aria-label="Kreisförmige Arena mit Kugeln und Hammer"></canvas><div id="pausedBadge" class="paused-badge" hidden>PAUSIERT</div></div>
+<div class="transport"><button id="restart" class="icon-button" aria-label="Simulation neu starten" title="Neu starten">↺</button><button id="play" class="play-button">Ⅱ &nbsp; Pausieren</button><span class="format-tag">9:16 <span>·</span> VERTICAL</span></div>
+<div class="stats"><div><span id="ballCount">4</span><small>KUGELN</small></div><div><span id="splitCount">0</span><small>TREFFER</small></div><div><span id="fpsCount">60</span><small>LIVE FPS</small></div></div>
+</section>
+<aside class="export panel" aria-label="Video erstellen">
+<div class="section-title"><h2><span>03</span> Dein nächster Short</h2></div><p class="muted">Vom Experiment direkt in deine Galerie.</p>
+<div class="export-art"><svg width="85" height="85" viewBox="0 0 80 80" aria-hidden="true"><path d="M18 62 62 18M18 18h44v44" fill="none" stroke="#b49afa" stroke-width="5"/></svg><div>MADE TO<br><strong>GO VERTICAL.</strong></div><span class="art-dots">•••</span></div>
+<label class="field-label" for="resolution">Auflösung</label><select id="resolution"><option value="1080">1080 × 1920 · Full HD</option><option value="720" selected>720 × 1280 · mobil empfohlen</option></select>
+<label class="field-label">Bildrate</label><div class="segmented" role="group" aria-label="Bildrate"><button data-fps="30" class="selected" aria-pressed="true">30 FPS</button><button data-fps="60" aria-pressed="false">60 FPS</button></div>
+<div class="range-heading"><label for="duration">Videolänge</label><output id="durationValue">30 s</output></div><input id="duration" type="range" min="15" max="60" value="30"><div class="range-ends"><span>15 Sekunden</span><span>60 Sekunden</span></div>
+<div class="export-summary"><div><span>Format</span><strong id="codec">Wird geprüft …</strong></div><div><span>Seitenverhältnis</span><strong>9:16</strong></div><div><span>Verarbeitung</span><strong>Auf deinem Gerät</strong></div></div>
+<button id="record" class="primary-button">● &nbsp; Video aufnehmen</button><button id="stopRecord" class="secondary-button" hidden>■ &nbsp; Aufnahme beenden</button><a id="download" class="download-button" hidden download>↓ Video herunterladen</a><progress id="progress" value="0" max="30" hidden></progress>
+<p id="status" class="status" role="status" aria-live="polite">Die Aufnahme startet mit einer neuen Simulation.</p><p class="small-note">MP4, wenn dein Browser es unterstützt. Sonst WebM. Für Bildschirmaufnahmen: Clean View öffnen, zum Verlassen doppelt tippen.</p>
+<div class="privacy"><span>♧</span> Keine Uploads. Keine Anmeldung.<br>Nur du und die Physik.</div>
+</aside>
+</div>
+<footer><span>BUILT FOR THE LOOP.</span><span>Canvas Physics <b>·</b> Android ready <b>·</b> Open source</span></footer>
+</main><script type="module" src="./src/app.js"></script>
+</body></html>
