@@ -12,4 +12,6 @@ const html = (await readFile('dist/index.html', 'utf8'))
   .replace('./src/app.js', `./src/app.js?v=${version}`)
   .replace('./style.css', `./style.css?v=${version}`);
 await writeFile('dist/index.html', html);
+const app = (await readFile('dist/src/app.js', 'utf8')).replace("'./physics.js'", `'./physics.js?v=${version}'`);
+await writeFile('dist/src/app.js', app);
 console.log(`Static build ready in dist/ (assets ${version})`);

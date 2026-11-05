@@ -5,6 +5,7 @@ export const MODES = [
   { name: 'Laser', subtitle: 'Licht trifft auf Kettenreaktion.', icon: 'ϟ' },
   { name: 'Overdrive', subtitle: 'Mehr Hämmer. Immer schneller.', icon: '»' },
   { name: 'Chaos', subtitle: 'Erwarte das Unerwartete.', icon: '✧' },
+  { name: 'Laserflug', subtitle: 'Zwei frei fliegende Laser ziehen ihre Bahnen.', icon: 'ϟ' },
 ];
 export function distanceToSegment(px, py, ax, ay, bx, by) {
   const dx = bx-ax, dy = by-ay;
@@ -33,6 +34,21 @@ export function ballCollision(a, b) {
   }
   return true;
 }
+// Renderer and hit detection use the same capsule dimensions.
+export function toolSegment(tool) {
+  const c = Math.cos(tool.angle), s = Math.sin(tool.angle);
+  if (tool.kind === 'laser') {
+    const start = tool.centered ? -tool.length/2 : 0;
+    const end = tool.centered ? tool.length/2 : tool.length;
+    return [tool.x+c*start, tool.y+s*start, tool.x+c*end, tool.y+s*end];
+  }
+  const x = tool.x+c*tool.length, y = tool.y+s*tool.length;
+  return [x-s*tool.headHalfLength, y+c*tool.headHalfLength,
+    x+s*tool.headHalfLength, y-c*tool.headHalfLength];
+}
+export function toolHitsBall(tool, ball) {
+  return distanceToSegment(ball.x, ball.y, ...toolSegment(tool)) < ball.r+tool.width/2;
+}
 export class Simulation {
   constructor(options = {}) {
     this.mode = options.mode ?? 0;
@@ -42,7 +58,11 @@ export class Simulation {
     this.balls = []; this.time = 0; this.radius = 210; this.nextId = 0;
     this.splits = 0; this.onSplit = null; this.event = ''; this.eventUntil = 0;
     this.nextEvent = 5; this.chaosSpeed = 1; this.angle = 0;
-    this.fly = {x:0,y:0,vx:88,vy:61,r:31};
+    this.fly = {x:0,y:0,vx:88,vy:61,r:Math.hypot(40,34)+13};
+    this.lasers = [
+      {x:-65,y:-35,vx:74,vy:57,r:61,angle:.4,spin:.85,color:'#ff739e'},
+      {x:65,y:35,vx:-63,vy:79,r:61,angle:2.1,spin:-1.05,color:'#70ebc7'},
+    ];
     for (let i=0; i<(options.initial ?? 4); i++) {
       const a = i*Math.PI*2/(options.initial ?? 4)+.4;
       this.balls.push(this.makeBall(Math.cos(a)*100, Math.sin(a)*100));
@@ -71,10 +91,11 @@ export class Simulation {
     return true;
   }
   tools() {
-    if (this.mode === 1) return [{x:this.fly.x,y:this.fly.y,angle:this.angle,length:40,width:20,kind:'hammer'}];
+    if (this.mode === 6) return this.lasers.map(laser => ({...laser,length:116,width:6,centered:true,kind:'laser'}));
+    if (this.mode === 1) return [{x:this.fly.x,y:this.fly.y,angle:this.angle,length:40,width:26,headHalfLength:34,kind:'hammer'}];
     const count = this.mode === 2 ? 2 : this.mode === 4 ? Math.min(5,2+Math.floor(this.time/8)) : this.mode === 5 ? 3 : 1;
     return Array.from({length:count},(_,i) => ({x:0,y:0,angle:this.angle+i*Math.PI*2/count,
-      length:this.radius*.77, width:this.mode===3?4:17,kind:this.mode===3?'laser':'hammer'}));
+      length:this.radius*.77, width:this.mode===3?6:26,headHalfLength:34,kind:this.mode===3?'laser':'hammer'}));
   }
   step(dt) {
     // Fixed substeps bound both ball travel and the tip's swept arc on mobile devices.
@@ -99,6 +120,11 @@ export class Simulation {
     const speed = this.mode===4 ? Math.min(2.6,.8+this.time*.035) : this.mode===5?this.chaosSpeed:1;
     this.angle += dt*speed;
     this.fly.x+=this.fly.vx*dt;this.fly.y+=this.fly.vy*dt;wallCollision(this.fly,this.radius);
+    if (this.mode === 6) for (const laser of this.lasers) {
+      laser.x += laser.vx*dt; laser.y += laser.vy*dt;
+      laser.angle += laser.spin*dt;
+      wallCollision(laser,this.radius);
+    }
     for (const b of this.balls) { b.x+=b.vx*dt;b.y+=b.vy*dt;wallCollision(b,this.radius); }
     // Uniform grid keeps collision work local instead of comparing every pair.
     const grid = new Map(), cell = 14;
@@ -117,10 +143,7 @@ export class Simulation {
       // Fresh children have a short grace period to prevent same-frame cascades.
       if (this.time-b.born<.48) continue;
       for (const tool of tools) {
-        const tipX=tool.x+Math.cos(tool.angle)*tool.length,tipY=tool.y+Math.sin(tool.angle)*tool.length;
-        const hit=tool.kind==='laser'
-          ? distanceToSegment(b.x,b.y,tool.x,tool.y,tipX,tipY)<b.r+tool.width
-          : distanceToSegment(b.x,b.y,tipX-Math.sin(tool.angle)*20,tipY+Math.cos(tool.angle)*20,tipX+Math.sin(tool.angle)*20,tipY-Math.cos(tool.angle)*20)<b.r+tool.width/2;
+        const hit=toolHitsBall(tool,b);
         if(hit){hits.push(b.id);break;}
       }
     }

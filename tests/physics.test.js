@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Simulation, wallCollision, ballCollision, distanceToSegment } from '../src/physics.js';
+import { Simulation, MODES, wallCollision, ballCollision, distanceToSegment, toolHitsBall, toolSegment } from '../src/physics.js';
 const ball = (x,y,vx,vy)=>({x,y,vx,vy,r:7});
 test('Ein Treffer entfernt den Elternball und erzeugt exakt zwei neue IDs',()=>{
  const s=new Simulation({initial:1});const parent=s.balls[0];
@@ -34,8 +34,8 @@ test('Ein physischer Hammerkontakt verdoppelt genau einmal, Kinder haben Schutzz
  const s=new Simulation({initial:1,random:()=>.5});const b=s.balls[0];b.x=s.radius*.77;b.y=0;b.vx=0;b.vy=0;b.born=-1;
  s.step(1/240);assert.equal(s.balls.length,2);s.step(1/240);assert.equal(s.balls.length,2);
 });
-test('Alle sechs Modi bleiben über 20 Sekunden endlich, begrenzt und erzeugen Treffer',()=>{
- for(let mode=0;mode<6;mode++){
+test('Alle sieben Modi bleiben über 20 Sekunden endlich, begrenzt und erzeugen Treffer',()=>{
+ for(let mode=0;mode<MODES.length;mode++){
    let seed=123;const random=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
    const s=new Simulation({mode,limit:128,random});for(let i=0;i<1200;i++)s.step(1/60);
    assert.ok(s.splits>0,`mode ${mode} should split`);assert.ok(s.balls.length<=128);
@@ -45,4 +45,43 @@ test('Alle sechs Modi bleiben über 20 Sekunden endlich, begrenzt und erzeugen T
 });
 test('Mitwachsende Arena vergrößert sich, feste Arena bleibt unverändert',()=>{
  for(const grow of [true,false]){const s=new Simulation({grow,initial:24});s.step(1/60);assert.equal(s.radius>210,grow);}
+});
+test('Vergrößerte Hammerfläche trifft auch Kugeln am äußeren Kopfbereich',()=>{
+ const s=new Simulation({initial:1,random:()=>.5});
+ const b=s.balls[0];b.x=s.radius*.77;b.y=44;b.vx=0;b.vy=0;b.born=-1;
+ assert.ok(toolHitsBall(s.tools()[0],b));s.step(1/240);
+ assert.equal(s.balls.length,2);
+ // The handle does not split balls.
+ assert.equal(toolHitsBall(s.tools()[0],ball(50,0,0,0)),false);
+});
+test('Freier Laser trifft entlang beider Strahlhälften, aber nicht außerhalb',()=>{
+ const tool={x:0,y:0,angle:0,length:116,width:6,centered:true,kind:'laser'};
+ for(const x of [-50,50])assert.ok(toolHitsBall(tool,ball(x,0,0,0)));
+ assert.equal(toolHitsBall(tool,ball(70,0,0,0)),false);
+ assert.equal(toolHitsBall(tool,ball(0,11,0,0)),false);
+});
+test('Zwei gleichzeitig treffende Laser verdoppeln eine Elternkugel nur einmal',()=>{
+ const s=new Simulation({initial:1,mode:6,random:()=>.5});
+ for(const laser of s.lasers)Object.assign(laser,{x:0,y:0,vx:0,vy:0,angle:0,spin:0});
+ Object.assign(s.balls[0],{x:-35,y:0,vx:0,vy:0,born:-1});
+ s.step(1/240);assert.equal(s.balls.length,2);assert.equal(s.splits,1);
+ s.step(1/240);assert.equal(s.balls.length,2);
+});
+test('Fliegende Laser bewegen und drehen sich, reflektieren und bleiben vollständig in der Arena',()=>{
+ const s=new Simulation({initial:0,mode:6,grow:false});
+ const start=s.lasers.map(l=>({...l}));
+ for(let i=0;i<600;i++){
+   s.step(1/60);
+   for(const tool of s.tools()){
+     const [ax,ay,bx,by]=toolSegment(tool);
+     assert.ok(Math.max(Math.hypot(ax,ay),Math.hypot(bx,by))+tool.width/2<=s.radius+.001);
+   }
+ }
+ s.lasers.forEach((l,i)=>{
+   assert.ok(Math.hypot(l.x-start[i].x,l.y-start[i].y)>1);
+   assert.notEqual(l.angle,start[i].angle);
+   assert.ok(Math.abs(Math.hypot(l.vx,l.vy)-Math.hypot(start[i].vx,start[i].vy))<.001);
+ });
+ const l=s.lasers[0];Object.assign(l,{x:s.radius-l.r-.1,y:0,vx:100,vy:0});
+ s.step(1/60);assert.ok(l.vx<0);
 });

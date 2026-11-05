@@ -23,7 +23,8 @@ Der Build erzeugt ausschließlich statische Dateien in `dist/`. Für den Build-T
 
 ## Bedienung
 
-- Sechs Modi: Orbit, frei fliegender Hammer, Doppel-Orbit, Laser, Overdrive mit bis zu fünf schneller werdenden Hämmern und Chaos mit zufälligen Impulsen, Richtungswechseln und Tempoereignissen.
+- Sieben Modi: Orbit, frei fliegender Hammer, Doppel-Orbit, Laser, Overdrive mit bis zu fünf schneller werdenden Hämmern Chaos mit zufälligen Impulsen, Richtungswechseln und Tempoereignissen sowie Laserflug mit zwei frei fliegenden, rotierenden Lasern.
+- **Laser Flow** startet zwei pinke und mintfarbene Laser mit sechs Kugeln. Die Laser reflektieren an der Kreiswand. Alle Hammermodi haben größere Köpfe für häufigere Treffer. Im Video erscheint als Text ausschließlich die Kugelanzahl.
 - Preset auswählen oder Startkugeln, Stoppziel (32–1.200), wachsende Arena, Partikel und Sound einstellen. Physikeinstellungen starten einen neuen Durchlauf.
 - Pausieren, fortsetzen und neu starten. Beim Kugelziel endet die Simulation automatisch.
 - Video: 720 × 1280 oder 1080 × 1920, 30 oder 60 FPS, 15–60 Sekunden. Aufnahme beginnt mit einer neuen Simulation und endet spätestens am Kugelziel. Manuelles Beenden ist möglich.
@@ -46,14 +47,15 @@ Ein räumliches Raster reduziert die Paarvergleiche; feste kleine Teilschritte (
 
 ## Tests
 
-`npm test` führt elf automatisierte Tests mit dem Node-Testmodul aus:
+`npm test` führt 15 automatisierte Tests mit dem Node-Testmodul aus:
 
 - Exakt zwei Kinder, eindeutige IDs und keine doppelte Elternverarbeitung.
 - Generationenwachstum 1 → 2 → 4 → 8 → 16 und Einhaltung des Kugellimits.
 - Wandreflexion, Kugelimpuls und Energie, Trennung bei exakt überlappenden Mittelpunkten.
 - Segmentabstand, echter Hammerkontakt und Schutzzeit.
-- Alle sechs Modi über jeweils 20 simulierte Sekunden: Treffer, endliche Zustände, Wandgrenzen und Zählkonsistenz.
+- Alle sieben Modi über jeweils 20 simulierte Sekunden: Treffer, endliche Zustände, Wandgrenzen und Zählkonsistenz.
 - Feste und mitwachsende Arena.
+- Vergrößerte Hammerköpfe, beide Hälften der fliegenden Laser, gleichzeitige Lasertreffer und vollständige Strahlbegrenzung an der Wand.
 
 Zusätzlich wurde Chromium mit Desktop- und mobilem Viewport geprüft: Moduswechsel, Pause, Fortsetzen, Clean View und ein abspielbarer 720 × 1280 Videoexport. Ein echter Android-Geräte-/Hardwaretest und ein 60-Sekunden-Full-HD-Export bleiben geräteabhängige Prüfungen.
 
