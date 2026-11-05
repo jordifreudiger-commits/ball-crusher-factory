@@ -1,8 +1,9 @@
+import { finalizeVideo } from './video.js';
 import { ASMR, PRESETS } from './audio.js';
 import { Simulation, MODES, seededRandom } from './physics.js';
 const $=id=>document.getElementById(id), canvas=$('canvas'), ctx=canvas.getContext('2d',{alpha:false});
 let mode=7, fps=30, sim, running=true, finished=false, particles=[], recorder=null, recording=false, chunks=[], videoURL=null;
-let frameAccumulator=0, runConfig;
+let frameAccumulator=0, runConfig, captureStart=0, captureSeconds=0;
 const audio=new ASMR();
 let last=performance.now(), fpsElapsed=0, fpsFrames=0, drawElapsed=0, stream;
 const supported=typeof MediaRecorder!=='undefined' && typeof canvas.captureStream==='function';
@@ -58,6 +59,7 @@ let lastTap=0;$('stage').addEventListener('pointerup',()=>{const now=performance
 function lockSettings(lock){for(const el of document.querySelectorAll('.settings button,.settings input,.settings select,.segmented button,#resolution,#duration,#play,#restart,#replay,#newVariant,#seed'))el.disabled=lock;}
 function stopRecording(message){
  if(!recording)return;
+ captureSeconds=(performance.now()-captureStart)/1000;
  recording=false;running=false;syncPlay();$('stopRecord').disabled=true;
  $('status').textContent=message||'Video wird fertiggestellt …';
  if(recorder&&recorder.state!=='inactive')recorder.stop();
@@ -74,12 +76,14 @@ $('record').onclick=async()=>{
    recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:width===1080?10_000_000:5_000_000});
    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
    recorder.onerror=()=>{stopRecording();$('status').textContent='Aufnahmefehler. Versuche 720p / 30 FPS oder die Bildschirmaufnahme.';};
-   recorder.onstop=()=>{
-     stream?.getTracks().forEach(t=>t.stop());lockSettings(false);$('stopRecord').hidden=true;$('record').disabled=false;$('progress').hidden=true;
-     if(chunks.length){if(videoURL)URL.revokeObjectURL(videoURL);const blob=new Blob(chunks,{type:recorder.mimeType});videoURL=URL.createObjectURL(blob);$('download').href=videoURL;$('download').download=`ball-crusher-${MODES[mode].name.toLowerCase()}-seed-${runConfig.seed}.${blob.type.startsWith('video/mp4')?'mp4':'webm'}`;$('download').hidden=false;$('status').textContent=`Video bereit · ${(blob.size/1024/1024).toFixed(1)} MB. Zum Speichern herunterladen.`;}
+   recorder.onstop=async()=>{
+     stream?.getTracks().forEach(t=>t.stop());$('stopRecord').hidden=true;$('progress').hidden=true;
+     try{
+     if(chunks.length){if(videoURL)URL.revokeObjectURL(videoURL);const blob=await finalizeVideo(new Blob(chunks,{type:recorder.mimeType}),captureSeconds);videoURL=URL.createObjectURL(blob);$('download').href=videoURL;$('download').download=`ball-crusher-${MODES[mode].name.toLowerCase()}-seed-${runConfig.seed}.${blob.type.startsWith('video/mp4')?'mp4':'webm'}`;$('download').hidden=false;$('status').textContent=`Video bereit · ${(blob.size/1024/1024).toFixed(1)} MB · ${captureSeconds.toFixed(1)} s. Zum Speichern herunterladen.`;}
      else $('status').textContent='Keine Videodaten erhalten. Nutze 720p / 30 FPS oder die Bildschirmaufnahme.';
+     }catch{$('status').textContent='Videodauer konnte nicht gespeichert werden. Nutze die Bildschirmaufnahme.';}finally{lockSettings(false);$('record').disabled=false;}
    };
-   recorder.start(500);recording=true;lockSettings(true);$('stopRecord').hidden=false;$('stopRecord').disabled=false;$('status').textContent=`Export von Seed ${runConfig.seed} · Tab im Vordergrund lassen.`;
+   captureStart=performance.now();recorder.start();recording=true;lockSettings(true);$('stopRecord').hidden=false;$('stopRecord').disabled=false;$('status').textContent=`Export von Seed ${runConfig.seed} · Tab im Vordergrund lassen.`;
  }catch(error){stream?.getTracks().forEach(t=>t.stop());$('record').disabled=false;$('progress').hidden=true;lockSettings(false);$('status').textContent='Diese Aufnahme ist auf dem Gerät nicht möglich. Versuche 720p / 30 FPS oder Clean View.';}
 };
 function draw(){
