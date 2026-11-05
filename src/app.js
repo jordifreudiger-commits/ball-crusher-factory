@@ -1,4 +1,4 @@
-import { finalizeVideo } from './video.js';
+import { finalizeVideo, selectVideoType } from './video.js';
 import { ASMR, PRESETS } from './audio.js';
 import { Simulation, MODES, seededRandom } from './physics.js';
 const $=id=>document.getElementById(id), canvas=$('canvas'), ctx=canvas.getContext('2d',{alpha:false});
@@ -7,8 +7,9 @@ let frameAccumulator=0, runConfig, captureStart=0, captureSeconds=0;
 const audio=new ASMR();
 let last=performance.now(), fpsElapsed=0, fpsFrames=0, drawElapsed=0, stream;
 const supported=typeof MediaRecorder!=='undefined' && typeof canvas.captureStream==='function';
-const mime=supported?['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t)):null;
-$('codec').textContent=mime?(mime.startsWith('video/mp4')?'MP4':'WebM'):'Bildschirmaufnahme';
+const mime=supported?selectVideoType(t=>MediaRecorder.isTypeSupported(t)):null;
+$('codec').textContent=mime?(mime.startsWith('video/mp4')?'MP4 · H.264/AAC':'WebM · Upload eingeschränkt'):'Bildschirmaufnahme';
+if(mime?.startsWith('video/webm'))$('status').textContent='Dieser Browser kann kein H.264/AAC-MP4 aufnehmen. Für TikTok: Clean View und Android-Bildschirmaufnahme mit Geräteton nutzen. WebM ist ein lokaler Download-Fallback.';
 if(!mime){$('record').disabled=true;$('status').textContent='Videoexport nicht verfügbar. Nutze Clean View und die Android-Bildschirmaufnahme.';}
 const modeButtons=MODES.map((m,i)=>{
  const b=document.createElement('button');b.className='mode'+(i===7?' active':'');b.innerHTML=`<span class="mode-icon">${m.icon}</span><span>${m.name}</span><span class="mode-check">✓</span>`;
@@ -74,12 +75,13 @@ $('record').onclick=async()=>{
    draw();stream=canvas.captureStream(fps);
    if($('sound').checked&&audio.dest)for(const track of audio.dest.stream.getAudioTracks())stream.addTrack(track.clone());
    recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:width===1080?10_000_000:5_000_000});
+   if(recorder.mimeType.startsWith('video/mp4') && /vp09|vp9|opus|av01/i.test(recorder.mimeType))throw Error('Inkompatible MP4-Codecs');
    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
    recorder.onerror=()=>{stopRecording();$('status').textContent='Aufnahmefehler. Versuche 720p / 30 FPS oder die Bildschirmaufnahme.';};
    recorder.onstop=async()=>{
      stream?.getTracks().forEach(t=>t.stop());$('stopRecord').hidden=true;$('progress').hidden=true;
      try{
-     if(chunks.length){if(videoURL)URL.revokeObjectURL(videoURL);const blob=await finalizeVideo(new Blob(chunks,{type:recorder.mimeType}),captureSeconds);videoURL=URL.createObjectURL(blob);$('download').href=videoURL;$('download').download=`ball-crusher-${MODES[mode].name.toLowerCase()}-seed-${runConfig.seed}.${blob.type.startsWith('video/mp4')?'mp4':'webm'}`;$('download').hidden=false;$('status').textContent=`Video bereit · ${(blob.size/1024/1024).toFixed(1)} MB · ${captureSeconds.toFixed(1)} s. Zum Speichern herunterladen.`;}
+     if(chunks.length){if(videoURL)URL.revokeObjectURL(videoURL);const blob=await finalizeVideo(new Blob(chunks,{type:recorder.mimeType}),captureSeconds);videoURL=URL.createObjectURL(blob);$('download').href=videoURL;$('download').download=`ball-crusher-${MODES[mode].name.toLowerCase()}-seed-${runConfig.seed}.${blob.type.startsWith('video/mp4')?'mp4':'webm'}`;$('download').hidden=false;$('status').textContent=`Video bereit · ${(blob.size/1024/1024).toFixed(1)} MB · ${captureSeconds.toFixed(1)} s. ${blob.type.startsWith('video/webm')?'WebM: Für TikTok besser Android-Bildschirmaufnahme oder in H.264/AAC-MP4 konvertieren.':'Zum Speichern herunterladen.'}`;}
      else $('status').textContent='Keine Videodaten erhalten. Nutze 720p / 30 FPS oder die Bildschirmaufnahme.';
      }catch{$('status').textContent='Videodauer konnte nicht gespeichert werden. Nutze die Bildschirmaufnahme.';}finally{lockSettings(false);$('record').disabled=false;}
    };

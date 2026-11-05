@@ -1,3 +1,9 @@
+export function selectVideoType(supports) {
+ // Generic video/mp4 may silently select VP9 + Opus. That container is not
+ // a reliable TikTok upload format even if a browser can play it.
+ const types=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1.42001f,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+ return types.find(supports)||null;
+}
 // MediaRecorder may omit/falsify duration in fragmented files. Finalize headers
 // without transcoding or changing encoded audio/video samples.
 const text=(b,a,n)=>String.fromCharCode(...b.subarray(a,a+n));

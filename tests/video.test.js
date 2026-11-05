@@ -12,3 +12,9 @@ test('WebM receives an explicit duration in timecode units',()=>{
 test('Invalid recordings are rejected rather than offered with a false duration',async()=>{
  assert.throws(()=>fixMP4(new Uint8Array(1),30));assert.throws(()=>fixWebM(new Uint8Array(1),30));await assert.rejects(finalizeVideo(new Blob(),0));
 });
+test('MP4 fallback cannot silently choose VP9/Opus for TikTok',async()=>{
+ const {selectVideoType}=await import('../src/video.js');
+ assert.equal(selectVideoType(t=>t==='video/mp4'),null);
+ assert.ok(selectVideoType(t=>t.startsWith('video/webm')).startsWith('video/webm'));
+ assert.match(selectVideoType(()=>true),/avc1.*mp4a/);
+});

@@ -112,3 +112,9 @@ Nach dem Stoppen werden die Container-Zeitinformationen mit der tatsächlich auf
 `python scripts/video-duration.py` prüft mit Playwright/Chromium und ffprobe jeweils einen MP4- und WebM-Export mit Ton über sechs Sekunden, inklusive der vom Browser und ffprobe gelesenen Dauer. Der statische Build-Server muss auf Port 5173 laufen. Zusätzlich prüfen drei Node-Tests die Headerkorrektur und Fehlerbehandlung. Ein direkter TikTok-/Android-Galerietest bleibt geräteabhängig.
 
 Audio-Glättung: Beim Neustart werden geplante Gain-Verläufe vor einem 20-ms-Ausblenden abgebrochen. Ein kurzer Planungsvorlauf, weichere Anschläge und ein größerer Audiopuffer reduzieren Knack- und Lastspitzen. Der Ausgang arbeitet ohne WaveShaper-Sättigung.
+
+### TikTok akzeptiert einen langen Clip als „unter 1 Sekunde“
+
+Die Dateiendung MP4 allein reicht nicht aus: Ein generischer `video/mp4`-MediaRecorder kann VP9/Opus statt H.264/AAC wählen. Der Export fordert deshalb nur noch explizites H.264/AAC für MP4 an und lehnt gemeldetes VP9/Opus/AV1 in MP4 ab. Fehlt diese Browserfähigkeit, bleibt WebM mit deutlichem Hinweis auf eingeschränkte Upload-Kompatibilität verfügbar. Für TikTok dann Clean View mit der nativen Android-Bildschirmaufnahme und Geräteton verwenden oder das Video in einem lokalen Editor als H.264/AAC-MP4 neu kodieren. Umbenennen der Endung konvertiert nichts. Eine erfolgreiche Browser-/ffprobe-Prüfung ist kein bestätigter TikTok-Uploadtest.
+
+`python scripts/video-duration.py 22` prüft zwei 22-Sekunden-Aufnahmen (automatische Auswahl und erzwungenes WebM), Dauer und vorhandene Tonspur. Falls MP4 verfügbar ist, müssen ffprobe zufolge H.264 und AAC vorliegen. Auf Browsern ohne diese Encoder wird der WebM-Fallback getestet.
