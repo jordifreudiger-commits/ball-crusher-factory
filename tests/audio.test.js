@@ -6,3 +6,7 @@ test('Audio settings validate storage and clamp volume',()=>{assert.equal(settin
 test('Mute and channel switches suppress events',()=>{const a=new ASMR();a.event('split');assert.equal(a.pending.length,0);a.settings.enabled=true;a.settings.balls=false;a.event('ball');a.event('wall');assert.equal(a.pending.length,0);a.event('split');assert.equal(a.pending.length,1);});
 test('Dense collisions are bounded and priority events survive',()=>{const a=new ASMR();a.settings.enabled=true;for(let i=0;i<500;i++)a.event('ball',200,i*.01);a.event('laser',200,5);assert.ok(a.pending.length<=32);assert.equal(a.pending.at(-1).kind,'laser');});
 test('Audio observation does not change deterministic physics',()=>{const a=new Simulation({mode:0,initial:24,seed:2}),b=new Simulation({mode:0,initial:24,seed:2});let events=0;a.onAudio=()=>events++;for(let i=0;i<120;i++){a.step(1/60);b.step(1/60);}assert.ok(events>0);assert.deepEqual(a.balls,b.balls);});
+test('Reset cancels future gain ramps before fading and stopping voices',()=>{
+ const a=new ASMR(),calls=[];a.ctx={currentTime:2};a.voices=[{g:{gain:{cancelAndHoldAtTime:t=>calls.push(['hold',t]),linearRampToValueAtTime:(v,t)=>calls.push(['fade',v,t])}},o:{stop:t=>calls.push(['stop',t])}}];
+ a.reset();assert.deepEqual(calls,[['hold',2],['fade',0,2.02],['stop',2.025]]);assert.equal(a.voices.length,0);
+});
