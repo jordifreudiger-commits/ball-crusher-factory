@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/server.js",
-    "test": "node tests/physics.test.js",
+    "test": "node tests/physics.test.js && node tests/audio.test.js",
     "build": "node scripts/build.js"
   },
   "engines": {

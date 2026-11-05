@@ -182,13 +182,13 @@ export class Simulation {
       wave.previous=wave.radius;
       if(wave.active)wave.radius+=150*dt;
     }
-    for (const b of this.balls) { b.prevX=b.x;b.prevY=b.y; b.x+=b.vx*dt;b.y+=b.vy*dt;wallCollision(b,this.radius); }
+    for (const b of this.balls) { b.prevX=b.x;b.prevY=b.y; b.x+=b.vx*dt;b.y+=b.vy*dt;if(wallCollision(b,this.radius))this.onAudio?.('wall',Math.hypot(b.vx,b.vy)); }
     // Uniform grid keeps collision work local instead of comparing every pair.
     const grid = new Map(), cell = 14;
     for (const b of this.balls) {
       const gx=Math.floor(b.x/cell), gy=Math.floor(b.y/cell);
       for (let x=gx-1;x<=gx+1;x++) for(let y=gy-1;y<=gy+1;y++) {
-        for (const a of grid.get(`${x},${y}`) ?? []) ballCollision(a,b);
+        for (const a of grid.get(`${x},${y}`) ?? []) {const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;const strength=-((b.vx-a.vx)*dx+(b.vy-a.vy)*dy)/d;if(ballCollision(a,b)&&strength>8)this.onAudio?.('ball',strength);}
       }
       const key=`${gx},${gy}`;
       if (!grid.has(key)) grid.set(key,[]);

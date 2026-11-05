@@ -87,3 +87,20 @@ Die Veröffentlichung ist vorbereitet und wird hierdurch nicht automatisch ausge
 3. Der Workflow `.github/workflows/pages.yml` führt Tests und Build aus, lädt `dist/` hoch und veröffentlicht mit dem Pages-Deploy-Job. Ein manueller Start über **Actions → Deploy GitHub Pages → Run workflow** ist ebenfalls möglich.
 
 Bei einem anderen Standardbranch den `push.branches`-Eintrag anpassen. Es werden keine API-Schlüssel oder zusätzlichen Dienste benötigt. Für eine rein manuelle Veröffentlichung den Inhalt von `dist/` an einen statischen Hoster übertragen.
+
+## ChaosLoop ASMR Audio
+
+Alle Sounds sind lokal mit Web Audio synthetisiert; keine externen Samples, Downloads oder Musiklizenzen. Sound ist zunächst ausgeschaltet. Auf Android zuerst **Sound-Vorschau** oder **Sound an** antippen, um den AudioContext freizugeben.
+
+- **Bubble ASMR** (Standard): kurze weiche, abfallende Pops; Lasertreffer behalten ihren Zap-Charakter.
+- **Crystal ASMR**: höhere, weich gefilterte Glasklicks.
+- **Laser ASMR**: präzise Tonhöhenabfälle und kurze Bestätigungstöne.
+- **Chaos Mix**: wechselnde Varianten aus den drei Klangfamilien.
+
+Master-Lautstärke, Preset, Sound an/aus sowie Kugel/Wand-, Verdopplungs-, Laser- und Hammerkanäle werden im Browser gespeichert. Die Vorschau schaltet Sound ein. Laser- und Hammerteilung sind jeweils ein kombiniertes Ereignis mit Pop/Bestätigung, keine doppelten Simulationstrigger. Der Verdopplungsschalter steuert auch den Bestätigungston. Wenn ein Werkzeugkanal aus ist, bleibt bei aktiviertem Verdopplungskanal der normale Split-Pop.
+
+Aufprallgeschwindigkeit beeinflusst Pegel und Tonhöhe. Kurze Ein-/Ausblendungen, Tiefpass, Kompressor mit hoher Ratio und abschließende begrenzende Kennlinie schützen vor Spitzen. Maximal zwölf Oszillatorstimmen sind aktiv; normale Kugel- und Wandkontakte dürfen nur sechs davon belegen. Ereignisse werden pro Simulationszeit gedrosselt und pro Bild priorisiert. Bei großer Dichte werden schwache bzw. überschüssige Kontakte ausgelassen, damit kein Dauerrauschen entsteht. Diese Audiosortierung verändert die Physik nicht.
+
+Lautsprecher und Export erhalten denselben begrenzten Mix. Bei aktiviertem Ton muss vor dem Export ein laufender AudioContext mit lebender Audiospur vorhanden sein; andernfalls wird die Aufnahme mit Hinweis blockiert. MP4/WebM wird nach Browserunterstützung gewählt. Chromium-Integration prüft Replay-Gleichheit, eine Audiospur im Recorder und Export-Metadaten; ein Stresstest mit 500 Ereignisanfragen pro Durchlauf prüft alle Presets auf messbares Signal, begrenzte Peaks und maximal zwölf Stimmen. `npm test` enthält zusätzlich vier Audio-Tests neben den 20 Physiktests.
+
+Android-Bildschirmaufnahmen benötigen die Einstellung **Geräteton/Medienton** im Betriebssystem. Manche Geräte oder Browser erlauben diese Tonaufnahme nicht. Dann den integrierten Export in aktuellem Chrome verwenden. Gerätespezifische Hörqualität, Lautsprecherverzerrungen und Latenzen sind nicht automatisch garantierbar; ein echter Android-Hörtest bleibt erforderlich. Audioereignisse werden im nächsten Renderframe ausgegeben; bei stockender Darstellung können bis zu einem Frame Verzögerung und ausgelassene Kontakte auftreten.
