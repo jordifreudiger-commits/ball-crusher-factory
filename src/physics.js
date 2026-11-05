@@ -13,6 +13,9 @@ export const MODES = [
   { name: 'Laserflug', subtitle: 'Zwei frei fliegende Laser ziehen ihre Bahnen.', icon: 'ϟ' },
   { name: 'Ricochet', subtitle: 'Ein Kopf. Ein Abpraller. Eine Kettenreaktion.', icon: '•' },
   { name: 'Pulsring', subtitle: 'Eine Welle, eine neue Generation.', icon: '◎' },
+  {name:'Escape',subtitle:'Durch das rotierende Tor.',icon:'↗'},
+  {name:'Color Clash',subtitle:'Rot gegen Blau.',icon:'◉'},
+  {name:'Sound Garden',subtitle:'Eine pentatonische Klangmaschine.',icon:'♫'},
 ];
 export function distanceToSegment(px, py, ax, ay, bx, by) {
   const dx = bx-ax, dy = by-ay;

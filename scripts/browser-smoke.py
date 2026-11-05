@@ -7,10 +7,10 @@ with sync_playwright() as p:
     errors=[]
     page.on('pageerror', lambda e: errors.append(str(e)))
     page.goto('http://localhost:5173/', wait_until='networkidle')
-    assert page.locator('.mode').count()==9
+    assert page.locator('.mode').count()==12
     assert 'Ricochet' in page.locator('.mode.active').inner_text()
     assert page.locator('#initial').input_value()=='1'
-    for i in range(9):
+    for i in range(12):
         page.locator('.mode').nth(i).click()
         page.wait_for_timeout(80)
     page.locator('#newVariant').click()

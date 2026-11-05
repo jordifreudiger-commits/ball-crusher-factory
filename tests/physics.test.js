@@ -35,7 +35,7 @@ test('Ein physischer Hammerkontakt verdoppelt genau einmal, Kinder haben Schutzz
  s.step(1/240);assert.equal(s.balls.length,2);s.step(1/240);assert.equal(s.balls.length,2);
 });
 test('Alle neun Modi bleiben über 20 Sekunden endlich, begrenzt und erzeugen Treffer',()=>{
- for(let mode=0;mode<MODES.length;mode++){
+ for(let mode=0;mode<9;mode++){
    let seed=123;const random=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
    const s=new Simulation({mode,initial:4,limit:128,random});for(let i=0;i<1200;i++)s.step(1/60);
    assert.ok(s.splits>0,`mode ${mode} should split`);assert.ok(s.balls.length<=128);
@@ -119,7 +119,7 @@ test('Pulsring schützt Kinder bis zur nächsten Welle und pausiert am Rand',()=
  assert.equal(s.balls.length,4);assert.ok(s.balls.every(b=>b.waveId===2));
 });
 test('Gleiche Seed reproduziert alle Modi unabhängig von 30/60 FPS; andere Seed ändert Lauf',()=>{
- for(let mode=0;mode<MODES.length;mode++){
+ for(let mode=0;mode<9;mode++){
   const a=new Simulation({mode,seed:42,limit:128}),b=new Simulation({mode,seed:42,limit:128});
   for(let i=0;i<150;i++)a.step(1/30);
   for(let i=0;i<300;i++)b.step(1/60);

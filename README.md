@@ -118,3 +118,31 @@ Audio-Glättung: Beim Neustart werden geplante Gain-Verläufe vor einem 20-ms-Au
 Die Dateiendung MP4 allein reicht nicht aus: Ein generischer `video/mp4`-MediaRecorder kann VP9/Opus statt H.264/AAC wählen. Der Export fordert deshalb nur noch explizites H.264/AAC für MP4 an und lehnt gemeldetes VP9/Opus/AV1 in MP4 ab. Fehlt diese Browserfähigkeit, bleibt WebM mit deutlichem Hinweis auf eingeschränkte Upload-Kompatibilität verfügbar. Für TikTok dann Clean View mit der nativen Android-Bildschirmaufnahme und Geräteton verwenden oder das Video in einem lokalen Editor als H.264/AAC-MP4 neu kodieren. Umbenennen der Endung konvertiert nichts. Eine erfolgreiche Browser-/ffprobe-Prüfung ist kein bestätigter TikTok-Uploadtest.
 
 `python scripts/video-duration.py 22` prüft zwei 22-Sekunden-Aufnahmen (automatische Auswahl und erzwungenes WebM), Dauer und vorhandene Tonspur. Falls MP4 verfügbar ist, müssen ffprobe zufolge H.264 und AAC vorliegen. Auf Browsern ohne diese Encoder wird der WebM-Fallback getestet.
+
+## Escape, Color Clash und Sound Garden
+
+Das Studio enthält zwölf Modi. Die drei neuen Modi liegen in `src/studio.js`, verwenden den vorhandenen festen 1/240-s-Takt und nutzen den bestehenden lokalen Audio- und Exportpfad. Es gibt keine neuen Laufzeitabhängigkeiten. Seed und vollständige Laufkonfiguration werden gemeinsam unter `chaosloop-run` in localStorage gespeichert und beim nächsten Öffnen wiederhergestellt. Änderungen starten eine neue Konfiguration; Wiederholung und Aufnahme verwenden den gespeicherten aktuellen Lauf. Browserdaten löschen entfernt auch diese Speicherung.
+
+**Escape:** Die Öffnung und die Kollisionsprüfung verwenden dieselbe Winkelbreite. Bewegung wird zusätzlich nach Weglänge (maximal 1,5 Welteinheiten einschließlich Torbewegung) unterteilt. Während der vollständigen Passage muss der Kugelradius durch die Öffnung passen. Erst außerhalb von Arenaradius plus Kugelradius wird die Kugel einmalig entfernt und durch zwei innen platzierte Kinder ersetzt. Kollisionskorrekturen dürfen Kugeln nicht durch geschlossene Wandteile schieben. Ausfliegende Kugeln blenden über 0,7 s aus. Das Limit ist auf 96 begrenzt. Kugelzahl und Entkommen-Zähler bleiben im sicheren unteren Bildbereich.
+
+**Color Clash:** Beide Teams verwenden identische Radien, Geschwindigkeiten und Energiepunktparameter. Die Energiepunkte werden an derselben Position gezeichnet, an der die Treffer geprüft werden. Die Trefferliste wird vor allen Farbänderungen erfasst. Gegenseitige gleichzeitige Treffer neutralisieren sich; geschützte Kugeln können weder angreifen noch umgefärbt werden. Weiße Umrisse und abgeblendete Energiepunkte zeigen den Schutz. Maximal 24 Kugeln pro Team. Sieger oder Zeit-Endstand werden eine Sekunde stehen gelassen; Gleichstände heißen ausdrücklich „Unentschieden“.
+
+**Sound Garden:** Zwei Anordnungen (Kaskade und Zickzack) mit 4–12 Klangkörpern und maximal 24 Kugeln. Kontakte verwenden eine Sperrzeit von 180 ms pro Kugel/Klangkörper und werden nur nach erneutem Kontaktbeginn ausgelöst. Die C-D-E-G-A-Pentatonik, weiche Hüllkurven, begrenzte Stärke und bis zu acht Gartenstimmen ergeben ein zurückhaltendes Klangbild. Farben kennzeichnen die Tonklassen, Treffer hellen nur den jeweiligen Klangkörper auf. Stereoposition folgt der horizontalen Position. Holz und Marimba unterscheiden sich in Ausklang und Lautstärke. Klangvariation verwendet den getrennten Audiozähler; Physik hängt nicht von Audioeinstellungen ab. Neue Kugeln lassen sich optional periodisch ergänzen. Der bestehende Master-Lautstärkeregler gilt auch hier.
+
+Drei Presets pro Modus:
+
+| Modus | Presets |
+| --- | --- |
+| Escape | Erster Ausbruch / Breites Tor / Nadelöhr |
+| Color Clash | Duell / Nahkampf / Zeitlupe |
+| Sound Garden | Pentatonische Kaskade / Holz-Zickzack / Wachsender Garten |
+
+Erprobte Startempfehlungen (30 s maximale Simulationsdauer, ggf. plus 1 s Abschluss):
+
+- Escape: **Erster Ausbruch**, Seed **1**, 3 Startkugeln, 70° Öffnung, +12°/s, Tempo 150, Limit 24. Erster Ausbruch nach etwa 1,13 s; Limit mit 21 Entkommenen erreicht, Abschluss nach etwa 27,71 s.
+- Color Clash: **Duell**, Seed **1**, 8 Kugeln pro Team, Tempo 95, Umlauf 2 rad/s, Reichweite 22, Schutz 0,8 s. Im gemessenen 30-s-Lauf 32 Farbwechsel und tatsächlicher Endstand 8:8. Kein geskripteter Sieger.
+- Sound Garden: **Pentatonische Kaskade**, Seed **1**, 8 Klangkörper, 3 Kugeln, Schwerkraft 100, keine zusätzlichen Kugeln, Marimba, Master zunächst 55 %. Im 30-s-Lauf 25 Kontakte, erster Ton nach etwa 1,15 s. **Holz-Zickzack**, Seed 17, erzeugte mit seinen Presetwerten 52 Kontakte in 30 s.
+
+Prüfung: `npm test` ergänzt acht gezielte Tests für Entkommen, Öffnungsränder/hohes Tempo, rotierende Öffnung, faire Farbwechsel, Schutz, Endstände, Garten-Kontaktbeginn, Recycling, Limits und Replay bei 30/60 FPS. `python scripts/studio-smoke.py` prüft auf einem 393×852-Viewport alle drei Abläufe bis zum exportierten Video, vergleicht tatsächliche Replay-Zustände, prüft Audio mit ffprobe und dekodiert das Gartensignal auf nichtstummen Inhalt. Benötigt lokal Playwright, Chromium und ffmpeg/ffprobe sowie den Build-Server.
+
+Prüfgrenzen: Keine Hörbeurteilung auf echten Android-Lautsprechern, kein bestätigter TikTok-Upload. Im Testbrowser ohne H.264/AAC wird WebM verwendet; für TikTok gelten weiterhin die Hinweise zum nativen Bildschirmrecorder. Die Gartenklänge sind weich synthetisierte Holz-/Marimba-Anklänge, keine Instrumentensamples. Wand- und Kugelkontakte sind eine diskrete Echtzeitnäherung; hohe Last kann die Wiedergabe verlangsamen. Die Abschlusssekunde kommt zur eingestellten Laufzeit hinzu.

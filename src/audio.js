@@ -15,6 +15,16 @@ export class ASMR {
  reset(){this.pending=[];this.last={};this.serial=0;if(this.ctx)for(const v of this.voices){const now=this.ctx.currentTime;
  if(v.g.gain.cancelAndHoldAtTime)v.g.gain.cancelAndHoldAtTime(now);else{v.g.gain.cancelScheduledValues(now);v.g.gain.setValueAtTime(0,now);}
  v.g.gain.linearRampToValueAtTime(0,now+.02);v.o.stop(now+.025);}this.voices=[];}
+ note(frequency,strength,pan,character=0){
+ if(!this.settings.enabled||!this.ctx||this.ctx.state!=='running')return;
+ const c=this.ctx,t=c.currentTime+.012;this.voices=this.voices.filter(v=>v.end>t);if(this.voices.length>=8)return;
+ const o=c.createOscillator(),g=c.createGain(),p=c.createStereoPanner();o.type='sine';o.frequency.value=frequency;
+ const variation=((Math.imul(++this.serial,2654435761)>>>0)%1000)/1000;
+ const level=Math.min(.13,.025+strength*.0004)*(character?.8:1)*(.94+.06*variation),duration=character?.32:.18;
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(level,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+duration);g.gain.linearRampToValueAtTime(0,t+duration+.01);
+ p.pan.value=Math.max(-.65,Math.min(.65,pan*.65));o.connect(g);g.connect(p);p.connect(this.master);o.start(t);o.stop(t+duration+.015);
+ this.voices.push({o,g,end:t+duration+.015});o.onended=()=>{o.disconnect();g.disconnect();p.disconnect();};
+ }
  event(kind,strength=100,time=0){if(!this.settings.enabled)return;const key=kind==='ball'?'balls':kind==='split'?'splits':kind;
  if(key!=='wall'&&!this.settings[key])return;
  if(kind==='wall'&&!this.settings.balls)return;

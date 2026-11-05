@@ -1,3 +1,4 @@
+import {StudioSimulation, CONFIG, CURATED, renderStudio} from './studio.js';
 import { finalizeVideo, selectVideoType } from './video.js';
 import { ASMR, PRESETS } from './audio.js';
 import { Simulation, MODES, seededRandom } from './physics.js';
@@ -11,17 +12,34 @@ const mime=supported?selectVideoType(t=>MediaRecorder.isTypeSupported(t)):null;
 $('codec').textContent=mime?(mime.startsWith('video/mp4')?'MP4 · H.264/AAC':'WebM · Upload eingeschränkt'):'Bildschirmaufnahme';
 if(mime?.startsWith('video/webm'))$('status').textContent='Dieser Browser kann kein H.264/AAC-MP4 aufnehmen. Für TikTok: Clean View und Android-Bildschirmaufnahme mit Geräteton nutzen. WebM ist ein lokaler Download-Fallback.';
 if(!mime){$('record').disabled=true;$('status').textContent='Videoexport nicht verfügbar. Nutze Clean View und die Android-Bildschirmaufnahme.';}
+const studioPanel=document.createElement('div');studioPanel.className='studio-controls';$('modes').after(studioPanel);
+function studioUI(values={}){
+ const active=mode>=9;
+ $('particles').closest('label').hidden=active;document.querySelector('.tip').hidden=active;
+ if($('audioPreset')){$('audioPreset').hidden=mode===11;document.querySelector('label[for="audioPreset"]').hidden=mode===11;for(const k of ['balls','splits','laser','hammer'])$('audio-'+k).closest('label').hidden=mode===11||(active&&['laser','hammer'].includes(k));}
+ for(const id of ['initial','limit']){$(id).hidden=active;$(id).previousElementSibling.hidden=active;}
+ $('grow').closest('label').hidden=active;$('preset').hidden=active;document.querySelector('label[for="preset"]').hidden=active;
+ studioPanel.innerHTML=active?`<label class="field-label" for="studioPreset">Modus-Preset</label><select id="studioPreset">${CURATED[mode].map(([name],i)=>`<option value="${i}">${name}</option>`).join('')}</select>`+Object.entries(CONFIG[mode]).map(([key,[label,value,min,max,step]])=>{
+ const selected=Number.isFinite(+values[key])?+values[key]:value;
+ if(['layout','character'].includes(key)){const names=key==='layout'?['Kaskade','Zickzack']:['Holz','Marimba'];return `<label class="field-label" for="cfg-${key}">${key==='layout'?'Anordnung':'Klangcharakter'}</label><select id="cfg-${key}">${names.map((name,i)=>`<option value="${i}" ${i===selected?'selected':''}>${name}</option>`).join('')}</select>`;}
+ return `<label class="field-label" for="cfg-${key}">${label}</label><input id="cfg-${key}" type="number" inputmode="decimal" value="${selected}" min="${min}" max="${max}" step="${step}">`;
+ }).join(''):'';
+ if(active){$('studioPreset').onchange=()=>{const index=+$('studioPreset').value,values=CURATED[mode][index][1];studioUI(values);$('studioPreset').value=index;$('seed').value=values.seed;reset();};for(const input of studioPanel.querySelectorAll('input,select:not(#studioPreset)'))input.onchange=()=>reset();}
+}
+function studioValues(){return mode<9?{}:Object.fromEntries(Object.keys(CONFIG[mode]).map(k=>[k,+$('cfg-'+k).value]));}
 const modeButtons=MODES.map((m,i)=>{
  const b=document.createElement('button');b.className='mode'+(i===7?' active':'');b.innerHTML=`<span class="mode-icon">${m.icon}</span><span>${m.name}</span><span class="mode-check">✓</span>`;
- b.title=m.subtitle;b.setAttribute('aria-pressed',String(i===7));b.onclick=()=>{mode=i;modeButtons.forEach((el,j)=>{el.classList.toggle('active',j===i);el.setAttribute('aria-pressed',String(j===i));});reset();};$('modes').append(b);return b;
+ b.title=m.subtitle;b.setAttribute('aria-pressed',String(i===7));b.onclick=()=>{mode=i;if(mode>=9)$('seed').value=CURATED[mode][0][1].seed;studioUI(mode>=9?CURATED[mode][0][1]:{});modeButtons.forEach((el,j)=>{el.classList.toggle('active',j===i);el.setAttribute('aria-pressed',String(j===i));});reset();};$('modes').append(b);return b;
 });
 async function initAudio(){try{await audio.unlock();}catch{ $('status').textContent='Audio gesperrt: Sound-Vorschau antippen. Alternativ Bildschirmaufnahme mit Geräteton verwenden.';}}
 function tone(){const kind=[3,6,7].includes(sim.mode)?'laser':[0,1,2,4,5].includes(sim.mode)?'hammer':'split';audio.event(audio.settings[kind]===false?'split':kind,180,sim.time);}
 function reset(replay=false){
  if(recording) return;
- if(replay!==true || !runConfig)runConfig={mode,seed:Number($('seed').value)>>>0,initial:+$('initial').value,limit:+$('limit').value,grow:$('grow').checked,duration:+$('duration').value};
+ if(replay!==true || !runConfig)runConfig={mode,seed:Number($('seed').value)>>>0,initial:+$('initial').value,limit:+$('limit').value,grow:$('grow').checked,duration:+$('duration').value,...studioValues()};
+ try{localStorage.setItem('chaosloop-run',JSON.stringify(runConfig));}catch{}
  $('seed').value=runConfig.seed;
- sim=new Simulation(runConfig);audio.reset();frameAccumulator=0;last=performance.now();
+ sim=mode>=9?new StudioSimulation(runConfig):new Simulation(runConfig);audio.reset();frameAccumulator=0;last=performance.now();
+ sim.onNote=(...args)=>audio.note(...args);
  sim.onAudio=(kind,strength)=>audio.event(kind,strength,sim.time);
  sim.onSplit=b=>{tone();if($('particles').checked){
    particles=particles.filter(p=>sim.time-p.born<.4);
@@ -31,7 +49,7 @@ function reset(replay=false){
  particles=[];running=true;finished=false;syncPlay();
 }
 function syncPlay(){ $('play').textContent=finished?'↺  Neuer Durchlauf':running?'Ⅱ  Pausieren':'▶  Fortsetzen';$('pausedBadge').hidden=running||finished; }
-$('play').onclick=()=>{initAudio();if(finished){reset();return;}running=!running;syncPlay();};
+$('play').onclick=()=>{initAudio();if(finished){reset();return;}running=!running;if(!running)audio.reset();syncPlay();};
 $('restart').onclick=()=>reset(true);
 $('replay').onclick=()=>reset(true);
 $('newVariant').onclick=()=>{$('seed').value=crypto.getRandomValues(new Uint32Array(1))[0];reset();};
@@ -93,6 +111,7 @@ function draw(){
  ctx.fillStyle='#0b101a';ctx.fillRect(0,0,w,h);
  const bg=ctx.createRadialGradient(cx,cy,10,cx,cy,w*.7);bg.addColorStop(0,'#152336');bg.addColorStop(1,'#0b101a');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
  ctx.fillStyle='#223047';for(let x=24*scale;x<w;x+=32*scale)for(let y=24*scale;y<h;y+=32*scale){ctx.beginPath();ctx.arc(x,y,.8*scale,0,Math.PI*2);ctx.fill();}
+ if(mode>=9){renderStudio(ctx,sim,w,h);return;}
  ctx.save();ctx.translate(cx,cy);ctx.scale(scale,scale);
  ctx.beginPath();ctx.arc(0,0,sim.radius+12,0,Math.PI*2);ctx.strokeStyle='#233145';ctx.lineWidth=1;ctx.stroke();
  ctx.beginPath();ctx.arc(0,0,sim.radius,0,Math.PI*2);ctx.fillStyle='#101b29';ctx.fill();ctx.strokeStyle='#65e9cb';ctx.lineWidth=3;ctx.shadowBlur=18;ctx.shadowColor='#36c8aa55';ctx.stroke();ctx.shadowBlur=0;
@@ -142,14 +161,14 @@ function frame(now){
    while(frameAccumulator+1e-12>=1/60 && running){
      sim.step(1/60);frameAccumulator-=1/60;
      particles=particles.filter(p=>sim.time-p.born<.4);
-     if(sim.balls.length>=sim.limit || sim.time+1e-8>=runConfig.duration){finished=true;running=false;syncPlay();if(recording)stopRecording();}
+     if(mode>=9?sim.done:(sim.balls.length>=sim.limit || sim.time+1e-8>=runConfig.duration)){finished=true;running=false;syncPlay();if(recording)stopRecording();}
    }
  }
  if(recording)$('progress').value=sim.time;
  audio.flush();
  drawElapsed+=dt;if(drawElapsed>=1/(recording?fps:60)){draw();drawElapsed=0;}
  fpsElapsed+=dt;fpsFrames++;if(fpsElapsed>=.5){$('fpsCount').textContent=Math.round(fpsFrames/fpsElapsed);fpsElapsed=0;fpsFrames=0;}
- $('ballCount').textContent=sim.balls.length.toLocaleString('de-DE');$('splitCount').textContent=sim.splits.toLocaleString('de-DE');
+ $('ballCount').textContent=sim.balls.length.toLocaleString('de-DE');$('splitCount').textContent=mode>=9?sim.events:sim.splits.toLocaleString('de-DE');
  requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden){audio.reset();if(recording)stopRecording();running=false;syncPlay();}});
@@ -161,5 +180,6 @@ for(const key of ['balls','splits','laser','hammer']){$('audio-'+key).checked=au
 $('volume').oninput=()=>{audio.settings.volume=+$('volume').value/100;audio.save();};
 $('audioPreset').onchange=()=>{audio.settings.preset=+$('audioPreset').value;audio.save();};
 $('sound').onchange=()=>{audio.settings.enabled=$('sound').checked;audio.save();if(audio.settings.enabled)initAudio();};
-$('audioPreview').onclick=async()=>{audio.settings.enabled=true;$('sound').checked=true;audio.save();await initAudio();audio.event('split',180,sim.time+1);audio.flush();};
-reset();requestAnimationFrame(frame);
+$('audioPreview').onclick=async()=>{audio.settings.enabled=true;$('sound').checked=true;audio.save();await initAudio();if(mode===11)audio.note(329.63,150,0,+$('cfg-character').value);else audio.event('split',180,sim.time+1);audio.flush();};
+try{const saved=JSON.parse(localStorage.getItem('chaosloop-run'));if(saved&&Number.isInteger(saved.mode)&&saved.mode>=0&&saved.mode<MODES.length){mode=saved.mode;runConfig=saved;studioUI(saved);for(const id of ['initial','limit','duration','seed'])if(saved[id]!==undefined)$(id).value=saved[id];$('grow').checked=!!saved.grow;modeButtons.forEach((b,i)=>{b.classList.toggle('active',i===mode);b.setAttribute('aria-pressed',String(i===mode));});}}catch{}
+reset(!!runConfig);requestAnimationFrame(frame);
