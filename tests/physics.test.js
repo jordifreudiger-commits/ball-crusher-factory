@@ -31,13 +31,13 @@ test('Segmenttest begrenzt Laser und Hammer auf ihre tatsächliche Länge',()=>{
  assert.equal(distanceToSegment(5,3,0,0,10,0),3);assert.equal(distanceToSegment(20,0,0,0,10,0),10);
 });
 test('Ein physischer Hammerkontakt verdoppelt genau einmal, Kinder haben Schutzzeit',()=>{
- const s=new Simulation({initial:1,random:()=>.5});const b=s.balls[0];b.x=s.radius*.77;b.y=0;b.vx=0;b.vy=0;b.born=-1;
+ const s=new Simulation({mode:0,initial:1,random:()=>.5});const b=s.balls[0];b.x=s.radius*.77;b.y=0;b.vx=0;b.vy=0;b.born=-1;
  s.step(1/240);assert.equal(s.balls.length,2);s.step(1/240);assert.equal(s.balls.length,2);
 });
-test('Alle sieben Modi bleiben über 20 Sekunden endlich, begrenzt und erzeugen Treffer',()=>{
+test('Alle neun Modi bleiben über 20 Sekunden endlich, begrenzt und erzeugen Treffer',()=>{
  for(let mode=0;mode<MODES.length;mode++){
    let seed=123;const random=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
-   const s=new Simulation({mode,limit:128,random});for(let i=0;i<1200;i++)s.step(1/60);
+   const s=new Simulation({mode,initial:4,limit:128,random});for(let i=0;i<1200;i++)s.step(1/60);
    assert.ok(s.splits>0,`mode ${mode} should split`);assert.ok(s.balls.length<=128);
    assert.equal(s.balls.length,4+s.splits);
    for(const b of s.balls){assert.ok([b.x,b.y,b.vx,b.vy].every(Number.isFinite));assert.ok(Math.hypot(b.x,b.y)<=s.radius-b.r+.001);}
@@ -47,7 +47,7 @@ test('Mitwachsende Arena vergrößert sich, feste Arena bleibt unverändert',()=
  for(const grow of [true,false]){const s=new Simulation({grow,initial:24});s.step(1/60);assert.equal(s.radius>210,grow);}
 });
 test('Vergrößerte Hammerfläche trifft auch Kugeln am äußeren Kopfbereich',()=>{
- const s=new Simulation({initial:1,random:()=>.5});
+ const s=new Simulation({mode:0,initial:1,random:()=>.5});
  const b=s.balls[0];b.x=s.radius*.77;b.y=44;b.vx=0;b.vy=0;b.born=-1;
  assert.ok(toolHitsBall(s.tools()[0],b));s.step(1/240);
  assert.equal(s.balls.length,2);
@@ -84,4 +84,46 @@ test('Fliegende Laser bewegen und drehen sich, reflektieren und bleiben vollstä
  });
  const l=s.lasers[0];Object.assign(l,{x:s.radius-l.r-.1,y:0,vx:100,vy:0});
  s.step(1/60);assert.ok(l.vx<0);
+});
+test('Ricochet: Start mit einer Kugel, Abpraller vor echtem Treffer zwischen 0,7 und 1,0 s',()=>{
+ for(const seed of [1,2,23,999,4294967295]){
+  const s=new Simulation({seed});assert.equal(s.mode,7);assert.equal(s.balls.length,1);
+  let first=null;s.onSplit=()=>{first??={time:s.time,bounces:s.bounces};};
+  for(let i=0;i<240;i++)s.step(1/240);
+  assert.ok(first.time>=.7&&first.time<=1);assert.equal(first.bounces,1);
+  assert.equal(s.balls.length,2);assert.ok(Math.hypot(s.balls[0].x-s.balls[1].x,s.balls[0].y-s.balls[1].y)>14);
+ }
+});
+test('Ricochet CCD trifft zwischen zwei Schritten auch bei sehr hoher Geschwindigkeit',()=>{
+ const s=new Simulation({mode:7,initial:1});
+ Object.assign(s.head,{x:-100,y:0,vx:60000,vy:0});
+ Object.assign(s.balls[0],{x:0,y:0,vx:0,vy:0,born:-1});
+ s.step(1/240);assert.equal(s.splits,1);assert.equal(s.head.vx,60000);
+});
+test('Ricochet CCD folgt dem reflektierten Weg und der Schweif löst keine Treffer aus',()=>{
+ const s=new Simulation({mode:7,initial:1});
+ Object.assign(s.head,{x:190,y:0,vx:60000,vy:0});
+ Object.assign(s.balls[0],{x:100,y:0,vx:0,vy:0,born:-1});
+ s.step(1/240);assert.equal(s.splits,1);assert.equal(s.bounces,1);assert.ok(s.head.vx<0);
+ const t=new Simulation({mode:7,initial:1});
+ t.trail=[{x:0,y:0,time:0}];Object.assign(t.head,{x:100,y:100,vx:10,vy:0});
+ Object.assign(t.balls[0],{x:0,y:0,vx:0,vy:0,born:-1});t.step(1/240);assert.equal(t.splits,0);
+});
+test('Pulsring schützt Kinder bis zur nächsten Welle und pausiert am Rand',()=>{
+ const s=new Simulation({mode:8,initial:1,grow:false});
+ Object.assign(s.balls[0],{x:70,y:0,vx:0,vy:0});
+ for(let i=0;i<96;i++)s.step(1/60);
+ assert.equal(s.balls.length,2);assert.equal(s.wave.active,false);assert.equal(s.wave.id,1);
+ assert.ok(s.balls.every(b=>b.waveId===1));
+ for(let i=0;i<144;i++)s.step(1/60);
+ assert.equal(s.balls.length,4);assert.ok(s.balls.every(b=>b.waveId===2));
+});
+test('Gleiche Seed reproduziert alle Modi unabhängig von 30/60 FPS; andere Seed ändert Lauf',()=>{
+ for(let mode=0;mode<MODES.length;mode++){
+  const a=new Simulation({mode,seed:42,limit:128}),b=new Simulation({mode,seed:42,limit:128});
+  for(let i=0;i<150;i++)a.step(1/30);
+  for(let i=0;i<300;i++)b.step(1/60);
+  assert.deepEqual(a.balls,b.balls);assert.deepEqual(a.head,b.head);assert.deepEqual(a.wave,b.wave);
+ }
+ const a=new Simulation({seed:42}),b=new Simulation({seed:43});assert.notDeepEqual(a.balls,b.balls);
 });
